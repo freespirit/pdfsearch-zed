@@ -3,13 +3,6 @@
 A document search extension for Zed that lets you semantically search through a
 PDF document and use the results in Zed's AI Assistant.
 
-## Structure
-
-As a context server extension for Zed, this project has two main parts:
-
--   the MCP server - a Python implementation in the `pdf_rag` directory
--   the Zed extension functionality - `src`, `extension.toml` and `Cargo.toml`
-
 ## Prerequisites
 
 This extension currently requires:
