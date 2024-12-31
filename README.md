@@ -1,57 +1,56 @@
-# About
+# PDF Search for Zed
 
-A document search (vector-based) MCP server extension for Zed.
+A document search extension for Zed that lets you semantically search through a
+PDF document and use the results in Zed's AI Assistant.
 
-# Structure
+## Structure
 
 As a context server extension for Zed, this project has two main parts:
 
 -   the MCP server - a Python implementation in the `pdf_rag` directory
 -   the Zed extension functionality - `src`, `extension.toml` and `Cargo.toml`
 
-# Prerequisites / Dependencies
+## Prerequisites
 
-In this initial version, the extension relies on `Qdrant` as a vectore store and
-`OpenAI` for embeddings. This means you need:
+This extension currently requires:
 
--   a Qdrant instance and its url
--   an OpenAI API key
+1. A `Qdrant` vector database instance (for storing document embeddings)
+2. An `OpenAI` API key (for generating embeddings)
+3. `uv` installed on your system
 
-Unfortunately, this means the extension setup is not trivial yet. But if it
-turns out to be a useful tool, there are options to be explored for both the
-vector store and the embeddings.
+**Note:** While the current setup is not trivial and it requires external
+services, we plan to simplify this in future versions by implementing
+self-contained alternatives for both vector storage and embeddings generation.
+Community feedback will help prioritize these improvements.
 
-# Installation
+## Quick Start
 
--   `git clone https://github.com/freespirit/pdfsearch-zed.git`
--   setup the environment of the MCP server:
+1. Clone the repository
 
 ```bash
-cd /path/to/pdfsearch-zed # the local clone of the extension
-cd pdf_rag
+git clone https://github.com/freespirit/pdfsearch-zed.git
+```
+
+2. Set up the Python environment for the MCP server:
+
+```bash
+cd pdfsearch-zed/pdf_rag
 uv venv
 uv sync
 ```
 
--   [Install Dev Extension](https://zed.dev/docs/extensions/developing-extensions) in Zed
+3. [Install Dev Extension](https://zed.dev/docs/extensions/developing-extensions) in Zed
 
-# Usage
-
--   build the pdf search store
-    -   TBD: Why do we need to provide the document path in the extension settings
-        if we build the DB manually?
+4. Build the search db
 
 ```bash
 cd /path/to/pdfsearch-zed/pdf_rag
-export OPENAI_API_KEY=...
-# Here your QDrant instance should be running at localhost:6333
-# This would split your document into chunks, embed them via OpenAI and
-# store them in the Qdrant instance. It may take a couple of minutes,
-# depending on the document size
+export OPENAI_API_KEY=<your_openai_api_key>
+# This may take a couple of minutes, depending on the document size
 uv run src/pdf_rag/rag.py build /path/to/file.pdf <qdrant_url>
 ```
 
--   add an entry in Zed's `context_servers` settings
+5. Configure Zed
 
 ```json
 "context_servers": {
@@ -66,28 +65,32 @@ uv run src/pdf_rag/rag.py build /path/to/file.pdf <qdrant_url>
 }
 ```
 
--   In the Zed's AI Assistant panel, use `/pdfsearch` and some query to search
-    the document and add the relevant information to the context.
+## Usage
 
-# TODOs and future plans
+1. Open Zed's AI Assistant panel
+2. Type `/pdfsearch` followed by your search query
+3. The extension will search the PDF and add relevant sections to the AI
+   Assistant's context
 
--   make the extension self-sufficient by default
-    -   search for built-in vector store
-    -   search for built-in embeddings model (consider performance and
-        dependencies)
--   make it more configurable
-    -   length of returned context/string, it's currently fixed
-    -   length of document chunks
--   other features
-    -   configurable size of the result
-        -   number of retrieved chunks
-        -   size in characters or tokens of the returned text
-    -   more than 1 document
-    -   alternative document sources
-        -   other file types
-        -   web pages?
+## Future Improvements
 
-# Known issues
+-   [ ] Self-contained vector store and embeddings (no external dependencies)
+-   [ ] Automated index building on first run
+-   [ ] Configurable result size
+-   [ ] Support for multiple PDFs
+-   [ ] Optional: Additional file formats beyond PDF
 
--   the vector DB is built manually and is a required step. It might be better
-    to offload this to the extension's first run.
+## Project Structure
+
+-   `pdf_rag/`: Python-based MCP server implementation
+-   `src/`: Zed extension code
+-   `extension.toml` and `Cargo.toml`: Zed extension configuration files
+
+## Known Limitations
+
+-   Manual index building is required before first use
+-   Currently supports only single PDF documents
+-   Requires external services (Qdrant and OpenAI)
+
+-   TBD: Why do we need to provide the document path in the extension settings
+    if we build the DB manually?
