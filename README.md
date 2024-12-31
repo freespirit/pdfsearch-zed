@@ -79,6 +79,9 @@ uv run src/pdf_rag/rag.py build /path/to/file.pdf <qdrant_url>
     -   length of returned context/string, it's currently fixed
     -   length of document chunks
 -   other features
+    -   configurable size of the result
+        -   number of retrieved chunks
+        -   size in characters or tokens of the returned text
     -   more than 1 document
     -   alternative document sources
         -   other file types
