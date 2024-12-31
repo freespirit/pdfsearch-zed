@@ -55,7 +55,7 @@ uv run src/pdf_rag/rag.py build /path/to/file.pdf <qdrant_url>
 
 ```json
 "context_servers": {
-    "docrag-context-server": {
+    "pdfsearch-context-server": {
         "settings": {
             "pdf_path": "/path/to/file.pdf",
             "extension_path": "/path/to/pdfsearch-zed",
