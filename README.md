@@ -1,12 +1,12 @@
 # About
 
-A document search (vector-based) MPC server extension for Zed.
+A document search (vector-based) MCP server extension for Zed.
 
 # Structure
 
 As a context server extension for Zed, this project has two main parts:
 
--   the MPC server - a Python implementation in the `pdf_rag` directory
+-   the MCP server - a Python implementation in the `pdf_rag` directory
 -   the Zed extension functionality - `src`, `extension.toml` and `Cargo.toml`
 
 # Prerequisites / Dependencies
