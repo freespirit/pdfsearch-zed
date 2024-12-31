@@ -1,0 +1,11 @@
+id = "pdfsearch"
+name = "PDF Search"
+description = "A PDF search (RAG-style) MCP for Zed"
+version = "0.0.1"
+schema_version = 1
+authors = ["stano <TBD email>"]
+repository = "https://github.com/freespirit/pdfsearch-zed"
+
+
+[context_servers.my-context-server]
+name = "PDF Search"

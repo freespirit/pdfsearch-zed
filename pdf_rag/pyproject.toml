@@ -1,0 +1,21 @@
+[project]
+name = "pdf_rag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+    "mcp>=1.1.2",
+    "openai>=1.58.1",
+    "pypdf>=5.1.0",
+    "qdrant-client>=1.12.2",
+    "tiktoken>=0.8.0",
+]
+
+[build-system]
+requires = [ "hatchling",]
+build-backend = "hatchling.build"
+
+[project.scripts]
+pdf_rag = "pdf_rag:main"
