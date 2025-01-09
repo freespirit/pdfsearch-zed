@@ -6,10 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.1",
+    "libsql-experimental>=0.0.41",
     "mcp>=1.1.2",
     "openai>=1.58.1",
     "pypdf>=5.1.0",
-    "qdrant-client>=1.12.2",
     "tiktoken>=0.8.0",
 ]
 

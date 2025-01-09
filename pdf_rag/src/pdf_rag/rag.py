@@ -1,16 +1,32 @@
 """THe RAG backbone of this MCP server"""
 
 import sys
+from pathlib import Path
 from typing import List
 
 import tiktoken
 from openai import OpenAI
 from pypdf import PdfReader
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
 from tqdm import tqdm
 
-VECTOR_COLLECTION_NAME = "Document Chunks"
+import libsql_experimental as libsql
+
+VECTOR_COLLECTION_NAME = "document_chunks"
+EMBEDDING_DIMENSIONS = 1024
+
+QUERY_DROP = f"DROP TABLE IF EXISTS {VECTOR_COLLECTION_NAME}"
+
+QUERY_CREATE = f"CREATE TABLE IF NOT EXISTS {VECTOR_COLLECTION_NAME} (" \
+               f"  text TEXT," \
+               f"  embedding F32_BLOB({EMBEDDING_DIMENSIONS})" \
+               f");"
+
+QUERY_INSERT = f"INSERT INTO {VECTOR_COLLECTION_NAME} (text, embedding) VALUES (?, vector32(?))"
+
+QUERY_SEARCH = "SELECT text, vector_distance_cos(embedding, vector32(?)) " \
+               f"  FROM {VECTOR_COLLECTION_NAME} " \
+               f"  ORDER BY vector_distance_cos(embedding, vector32(?)) ASC " \
+               f"  LIMIT 25;"
 
 
 class RAG:
@@ -20,13 +36,13 @@ class RAG:
     """
 
     openai: OpenAI
-    qdrant: QdrantClient
+    db_file: Path
 
-    def __init__(self, pdf_file: str, qdrant_url: str):
+    def __init__(self, pdf_file: str, db_path: str = "pdfsearch.sqlite"):
         self.pdf_file = pdf_file
 
         self.openai = OpenAI()
-        self.qdrant = QdrantClient(url=qdrant_url)
+        self.db_file = Path(db_path)
 
     def build_search_db(self):
         pdf_text = ""
@@ -38,39 +54,37 @@ class RAG:
         chunks = chunkify(text=pdf_text)
         embeddings = [(embed(chunk, self.openai), chunk) for chunk in tqdm(chunks)]
 
-        if not self.qdrant.collection_exists(VECTOR_COLLECTION_NAME):
-            self.qdrant.create_collection(
-                collection_name=VECTOR_COLLECTION_NAME,
-                vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
-            )
+        conn = libsql.connect(str(self.db_file.absolute()))
 
-        vector_points = [
-            PointStruct(id=i, vector=embedding, payload={"text": chunk})
-            for i, (embedding, chunk) in tqdm(enumerate(embeddings))
-        ]
-        operation_info = self.qdrant.upsert(
-            collection_name=VECTOR_COLLECTION_NAME,
-            wait=True,
-            points=vector_points,
-        )
+        conn.execute(QUERY_DROP)
+        conn.execute(QUERY_CREATE)
+        print(conn.commit())
 
-        print(f"Inserting {len(vector_points)} chunks of text: {operation_info.status}")
+        for i, (embedding, chunk) in tqdm(enumerate(embeddings)):
+            params = (chunk, str(embedding))
+            conn.execute(QUERY_INSERT, params)
+        conn.commit()
+
+        print(f"Inserted {len(embeddings)} chunks of text")
 
     def search(self, query: str) -> List[str]:
         embedding = embed(query, self.openai)
 
-        search_result = self.qdrant.query_points(
-            collection_name=VECTOR_COLLECTION_NAME,
-            query=embedding,
-            with_payload=True,
-            limit=25,  # TODO make it configurable
-        ).points
+        conn = libsql.connect(str(self.db_file.absolute()))
+        search_result = conn.execute(
+            QUERY_SEARCH,
+            (str(embedding), str(embedding)),
+        ).fetchall()
+        conn.commit()
 
-        return [point.payload["text"] for point in search_result]
+        for row in search_result:
+            print(row[0][:25], row[1])
+
+        return [row[0] for row in search_result]
 
 
 def chunkify(
-    text: str, max_tokens: int = 512, overlap: int = 64, tokenizer=None
+        text: str, max_tokens: int = 512, overlap: int = 64, tokenizer=None
 ) -> List[str]:
     """Split text into token-based chunks with overlap."""
     if not text.strip():
@@ -109,17 +123,12 @@ if __name__ == "__main__":
 
     if action == "build":
         pdf_file_path = sys.argv[2]
-        qdrant_url = sys.argv[3]
-        rag = RAG(pdf_file_path, qdrant_url=qdrant_url)
+        rag = RAG(pdf_file_path)
         rag.build_search_db()
     elif action == "search":
         q = sys.argv[2]
-
-        rag = RAG("", qdrant_url="http://localhost:6333")
+        rag = RAG("")
         result = rag.search(q)
-        for item in result:
-            print(item)
-            print("-----")
     elif action == "chunkify":
         pdf_doc_path = sys.argv[2]
         pdf_text = ""
@@ -129,9 +138,6 @@ if __name__ == "__main__":
                 pdf_text += page.extract_text(extraction_mode="plain")
 
         chunks = chunkify(text=pdf_text)
-        for chunk in chunks[:3]:
-            print(chunk)
-            print("-----")
     else:
         print(f"Unknown action: {action}")
         sys.exit(1)

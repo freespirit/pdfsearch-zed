@@ -7,14 +7,10 @@ PDF document and use the results in Zed's AI Assistant.
 
 This extension currently requires:
 
-1. A `Qdrant` vector database instance (for storing document embeddings)
-2. An `OpenAI` API key (for generating embeddings)
-3. `uv` installed on your system
+1. An `OpenAI` API key (for generating embeddings)
+2. `uv` installed on your system
 
-**Note:** While the current setup is not trivial and it requires external
-services, we plan to simplify this in future versions by implementing
-self-contained alternatives for both vector storage and embeddings generation.
-Community feedback will help prioritize these improvements.
+**Note:** While the current setup requires an OpenAI API key for generating embeddings, we plan to implement a self-contained alternative in future versions. Community feedback will help prioritize these improvements.
 
 ## Quick Start
 
@@ -40,7 +36,7 @@ uv sync
 cd /path/to/pdfsearch-zed/pdf_rag
 export OPENAI_API_KEY=<your_openai_api_key>
 # This may take a couple of minutes, depending on the document size
-uv run src/pdf_rag/rag.py build /path/to/file.pdf <qdrant_url>
+uv run src/pdf_rag/rag.py build /path/to/file.pdf
 ```
 
 5. Configure Zed
@@ -51,7 +47,6 @@ uv run src/pdf_rag/rag.py build /path/to/file.pdf <qdrant_url>
         "settings": {
             "pdf_path": "/path/to/file.pdf",
             "extension_path": "/path/to/pdfsearch-zed",
-            "qdrant_url": "http://localhost:6333",
             "openai_api_key": "sk-..."
         }
     }
@@ -67,7 +62,8 @@ uv run src/pdf_rag/rag.py build /path/to/file.pdf <qdrant_url>
 
 ## Future Improvements
 
--   [ ] Self-contained vector store and embeddings (no external dependencies)
+-   [x] Self-contained vector store
+-   [ ] Self-contained embeddings
 -   [ ] Automated index building on first run
 -   [ ] Configurable result size
 -   [ ] Support for multiple PDFs
@@ -83,7 +79,7 @@ uv run src/pdf_rag/rag.py build /path/to/file.pdf <qdrant_url>
 
 -   Manual index building is required before first use
 -   Currently supports only single PDF documents
--   Requires external services (Qdrant and OpenAI)
+-   Requires external services (OpenAI)
 
 -   TBD: Why do we need to provide the document path in the extension settings
     if we build the DB manually?

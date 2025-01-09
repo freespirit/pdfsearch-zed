@@ -41,11 +41,10 @@ async def get_prompt(
 
     if name == "pdfsearch":
         path_to_pdf = os.environ.get("PDF_PATH")
-        qdrant_url = os.environ.get("QDRANT_URL")
         user_input = arguments.get("input") if arguments else ""
 
         # TODO figure out when to build the vector db
-        rag = RAG(path_to_pdf, qdrant_url)
+        rag = RAG(path_to_pdf)
         related_chunks = rag.search(user_input)
         response = "\n###\n".join(related_chunks) + "\n###\n"
 
