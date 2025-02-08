@@ -7,7 +7,6 @@ use zed_extension_api::{
 
 #[derive(Debug, Deserialize)]
 struct PdfSearchContextServerSettings {
-    pdf_path: String,
     extension_path: String,
     openai_api_key: String,
 }
@@ -46,7 +45,6 @@ impl zed::Extension for MyExtension {
                 mcp_python_module,
             ],
             env: vec![
-                ("PDF_PATH".into(), settings.pdf_path),
                 ("OPENAI_API_KEY".into(), settings.openai_api_key),
             ],
         })
