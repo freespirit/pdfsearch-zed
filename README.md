@@ -35,8 +35,12 @@ uv sync
 ```bash
 cd /path/to/pdfsearch-zed/pdf_rag
 export OPENAI_API_KEY=<your_openai_api_key>
-# This may take a couple of minutes, depending on the document size
-uv run src/pdf_rag/rag.py build /path/to/file.pdf
+# This may take a couple of minutes, depending on the documents' size
+# You can provide multiple files and directories as arguments.
+#  - files would be chunked.
+#  - a directory would be considered as if its files contains chunks.
+#    E.g. they won't be further split.
+uv run src/pdf_rag/rag.py build "file1.pdf" "dir1" "file2.md" ...
 ```
 
 5. Configure Zed
@@ -45,7 +49,6 @@ uv run src/pdf_rag/rag.py build /path/to/file.pdf
 "context_servers": {
     "pdfsearch-context-server": {
         "settings": {
-            "pdf_path": "/path/to/file.pdf",
             "extension_path": "/path/to/pdfsearch-zed",
             "openai_api_key": "sk-..."
         }
@@ -62,24 +65,20 @@ uv run src/pdf_rag/rag.py build /path/to/file.pdf
 
 ## Future Improvements
 
--   [x] Self-contained vector store
--   [ ] Self-contained embeddings
--   [ ] Automated index building on first run
--   [ ] Configurable result size
--   [ ] Support for multiple PDFs
--   [ ] Optional: Additional file formats beyond PDF
+- [x] Self-contained vector store
+- [ ] Self-contained embeddings
+- [ ] Automated index building on first run
+- [ ] Configurable result size
+- [x] Support for multiple PDFs
+- [x] Optional: Additional file formats beyond PDF
 
 ## Project Structure
 
--   `pdf_rag/`: Python-based MCP server implementation
--   `src/`: Zed extension code
--   `extension.toml` and `Cargo.toml`: Zed extension configuration files
+- `pdf_rag/`: Python-based MCP server implementation
+- `src/`: Zed extension code
+- `extension.toml` and `Cargo.toml`: Zed extension configuration files
 
 ## Known Limitations
 
--   Manual index building is required before first use
--   Currently supports only single PDF documents
--   Requires external services (OpenAI)
-
--   TBD: Why do we need to provide the document path in the extension settings
-    if we build the DB manually?
+- Manual index building is required before first use
+- Requires external services (OpenAI)

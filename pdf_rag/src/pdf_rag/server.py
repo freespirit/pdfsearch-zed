@@ -40,11 +40,10 @@ async def get_prompt(
         raise ValueError(f"Prompt not found: {name}")
 
     if name == "pdfsearch":
-        path_to_pdf = os.environ.get("PDF_PATH")
         user_input = arguments.get("input") if arguments else ""
 
         # TODO figure out when to build the vector db
-        rag = RAG(path_to_pdf)
+        rag = RAG()
         related_chunks = rag.search(user_input)
         response = "\n###\n".join(related_chunks) + "\n###\n"
 

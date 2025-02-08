@@ -4,29 +4,35 @@ import sys
 from pathlib import Path
 from typing import List
 
+import libsql_experimental as libsql
 import tiktoken
 from openai import OpenAI
 from pypdf import PdfReader
 from tqdm import tqdm
-
-import libsql_experimental as libsql
+from typing_extensions import Tuple
 
 VECTOR_COLLECTION_NAME = "document_chunks"
 EMBEDDING_DIMENSIONS = 1024
 
 QUERY_DROP = f"DROP TABLE IF EXISTS {VECTOR_COLLECTION_NAME}"
 
-QUERY_CREATE = f"CREATE TABLE IF NOT EXISTS {VECTOR_COLLECTION_NAME} (" \
-               f"  text TEXT," \
-               f"  embedding F32_BLOB({EMBEDDING_DIMENSIONS})" \
-               f");"
+QUERY_CREATE = (
+    f"CREATE TABLE IF NOT EXISTS {VECTOR_COLLECTION_NAME} ("
+    f"  text TEXT,"
+    f"  embedding F32_BLOB({EMBEDDING_DIMENSIONS})"
+    f");"
+)
 
-QUERY_INSERT = f"INSERT INTO {VECTOR_COLLECTION_NAME} (text, embedding) VALUES (?, vector32(?))"
+QUERY_INSERT = (
+    f"INSERT INTO {VECTOR_COLLECTION_NAME} (text, embedding) VALUES (?, vector32(?))"
+)
 
-QUERY_SEARCH = "SELECT text, vector_distance_cos(embedding, vector32(?)) " \
-               f"  FROM {VECTOR_COLLECTION_NAME} " \
-               f"  ORDER BY vector_distance_cos(embedding, vector32(?)) ASC " \
-               f"  LIMIT 25;"
+QUERY_SEARCH = (
+    "SELECT text, vector_distance_cos(embedding, vector32(?)) "
+    f"  FROM {VECTOR_COLLECTION_NAME} "
+    f"  ORDER BY vector_distance_cos(embedding, vector32(?)) ASC "
+    f"  LIMIT 25;"
+)
 
 
 class RAG:
@@ -38,34 +44,20 @@ class RAG:
     openai: OpenAI
     db_file: Path
 
-    def __init__(self, pdf_file: str, db_path: str = "pdfsearch.sqlite"):
-        self.pdf_file = pdf_file
-
+    def __init__(self, db_path: str = "pdfsearch.sqlite"):
         self.openai = OpenAI()
         self.db_file = Path(db_path)
 
     def build_search_db(self):
-        pdf_text = ""
-        with open(self.pdf_file, "rb") as pdf_file:
-            reader = PdfReader(pdf_file)
-            for page in reader.pages:
-                pdf_text += page.extract_text(extraction_mode="plain")
-
-        chunks = chunkify(text=pdf_text)
-        embeddings = [(embed(chunk, self.openai), chunk) for chunk in tqdm(chunks)]
-
         conn = libsql.connect(str(self.db_file.absolute()))
-
         conn.execute(QUERY_DROP)
         conn.execute(QUERY_CREATE)
-        print(conn.commit())
-
-        for i, (embedding, chunk) in tqdm(enumerate(embeddings)):
-            params = (chunk, str(embedding))
-            conn.execute(QUERY_INSERT, params)
         conn.commit()
 
-        print(f"Inserted {len(embeddings)} chunks of text")
+    def add_knowledge(self, text: str, embedding: List[float]):
+        conn = libsql.connect(str(self.db_file.absolute()))
+        conn.execute(QUERY_INSERT, (text, str(embedding)))
+        conn.commit()
 
     def search(self, query: str) -> List[str]:
         embedding = embed(query, self.openai)
@@ -84,7 +76,7 @@ class RAG:
 
 
 def chunkify(
-        text: str, max_tokens: int = 512, overlap: int = 64, tokenizer=None
+    text: str, max_tokens: int = 512, overlap: int = 64, tokenizer=None
 ) -> List[str]:
     """Split text into token-based chunks with overlap."""
     if not text.strip():
@@ -111,33 +103,95 @@ def chunkify(
     return chunks
 
 
-def embed(text: str, client: OpenAI):
+def embed(text: str, client: OpenAI) -> list[float]:
     response = client.embeddings.create(
         input=text, model="text-embedding-3-small", dimensions=1024
     )
     return response.data[0].embedding
 
 
-if __name__ == "__main__":
-    action = sys.argv[1] if len(sys.argv) > 1 else None
+def embed_pdf(
+    file_path: Path, should_split: bool = True
+) -> List[Tuple[str, List[float]]]:
+    pdf_text = ""
+    with open(file_path, "rb") as pdf_file:
+        reader = PdfReader(pdf_file)
+        for page in reader.pages:
+            pdf_text += page.extract_text(extraction_mode="plain")
 
-    if action == "build":
-        pdf_file_path = sys.argv[2]
-        rag = RAG(pdf_file_path)
+    chunks = chunkify(text=pdf_text) if should_split else [pdf_text]
+    embeddings = [embed(chunk, OpenAI()) for chunk in tqdm(chunks)]
+
+    return list(zip(chunks, embeddings))
+
+
+def embed_text(
+    text: str,
+    should_split: bool = True,
+) -> List[Tuple[str, List[float]]]:
+    chunks = chunkify(text=text) if should_split else [text]
+    embeddings = [embed(chunk, OpenAI()) for chunk in tqdm(chunks)]
+
+    return list(zip(chunks, embeddings))
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="PDF document RAG system")
+    parser.add_argument(
+        "action",
+        choices=["build", "search", "chunkify"],
+        help="Action to perform",
+    )
+    parser.add_argument(
+        "inputs", nargs="+", help="Input files/directories or a search query"
+    )
+    args = parser.parse_args()
+
+    if args.action == "build":
+        rag = RAG()
         rag.build_search_db()
-    elif action == "search":
-        q = sys.argv[2]
-        rag = RAG("")
-        result = rag.search(q)
-    elif action == "chunkify":
-        pdf_doc_path = sys.argv[2]
+
+        # Process each input path
+        total_chunks = 0
+        for input_path in args.inputs:
+            path = Path(input_path)
+
+            # Handle PDF file
+            if path.is_file() and path.suffix.lower() == ".pdf":
+                embeddings = embed_pdf(path)
+                for chunk, embedding in tqdm(embeddings):
+                    rag.add_knowledge(chunk, embedding)
+                total_chunks += len(embeddings)
+
+            # Handle directory of text files
+            elif path.is_dir():
+                for text_file in tqdm(path.glob("*.txt")):
+                    text = text_file.read_text()
+                    embeddings = embed(text, OpenAI())
+                    rag.add_knowledge(text, embeddings)
+                    total_chunks += 1
+
+            # Assume a single file in other text format - txt, md...
+            else:
+                text = path.read_text()
+                embeddings = embed_text(text)
+                for t, e in embeddings:
+                    rag.add_knowledge(t, e)
+                    total_chunks += 1
+
+        print(f"Inserted {total_chunks} chunks of text")
+
+    elif args.action == "search":
+        rag = RAG()
+        result = rag.search(args.inputs[0])
+
+    elif args.action == "chunkify":
         pdf_text = ""
-        with open(pdf_doc_path, "rb") as pdf_file:
+        with open(args.inputs[0], "rb") as pdf_file:
             reader = PdfReader(pdf_file)
             for page in reader.pages:
                 pdf_text += page.extract_text(extraction_mode="plain")
 
         chunks = chunkify(text=pdf_text)
-    else:
-        print(f"Unknown action: {action}")
-        sys.exit(1)
