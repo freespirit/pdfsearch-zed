@@ -45,7 +45,12 @@ async def get_prompt(
         # TODO figure out when to build the vector db
         rag = RAG()
         related_chunks = rag.search(user_input)
-        response = "\n###\n".join(related_chunks) + "\n###\n"
+        response = ""
+        for chunk in related_chunks:
+            response += "<text>\n"
+            response += chunk
+            response += "<//text>\n"
+        response += "\n"
 
         return types.GetPromptResult(
             messages=[

@@ -1,7 +1,7 @@
 id = "pdfsearch"
 name = "PDF Search"
 description = "A PDF search (RAG-style) MCP for Zed"
-version = "0.0.1"
+version = "0.0.2"
 schema_version = 1
 authors = ["stano <TBD email>"]
 repository = "https://github.com/freespirit/pdfsearch-zed"

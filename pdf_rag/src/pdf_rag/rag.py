@@ -31,7 +31,7 @@ QUERY_SEARCH = (
     "SELECT text, vector_distance_cos(embedding, vector32(?)) "
     f"  FROM {VECTOR_COLLECTION_NAME} "
     f"  ORDER BY vector_distance_cos(embedding, vector32(?)) ASC "
-    f"  LIMIT 25;"
+    f"  LIMIT 10;"
 )
 
 
@@ -120,17 +120,18 @@ def embed_pdf(
             pdf_text += page.extract_text(extraction_mode="plain")
 
     chunks = chunkify(text=pdf_text) if should_split else [pdf_text]
-    embeddings = [embed(chunk, OpenAI()) for chunk in tqdm(chunks)]
+    embeddings = [embed(chunk, OpenAI()) for chunk in tqdm(chunks, desc=f"Embedding {file_path.name}")]
 
     return list(zip(chunks, embeddings))
 
 
+# TODO rename or split, it's ambiguous as it is now
 def embed_text(
     text: str,
     should_split: bool = True,
 ) -> List[Tuple[str, List[float]]]:
     chunks = chunkify(text=text) if should_split else [text]
-    embeddings = [embed(chunk, OpenAI()) for chunk in tqdm(chunks)]
+    embeddings = [embed(chunk, OpenAI()) for chunk in tqdm(chunks, desc=f"Embedding {text[:25]}")]
 
     return list(zip(chunks, embeddings))
 
@@ -161,13 +162,13 @@ if __name__ == "__main__":
             # Handle PDF file
             if path.is_file() and path.suffix.lower() == ".pdf":
                 embeddings = embed_pdf(path)
-                for chunk, embedding in tqdm(embeddings):
+                for chunk, embedding in embeddings:
                     rag.add_knowledge(chunk, embedding)
                 total_chunks += len(embeddings)
 
             # Handle directory of text files
             elif path.is_dir():
-                for text_file in tqdm(path.glob("*.txt")):
+                for text_file in tqdm(path.glob("*.txt"), desc=f"Embedding files in {path.name}"):
                     text = text_file.read_text()
                     embeddings = embed(text, OpenAI())
                     rag.add_knowledge(text, embeddings)
