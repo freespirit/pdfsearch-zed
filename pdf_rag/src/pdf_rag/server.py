@@ -1,12 +1,12 @@
 import asyncio
-import os
 
 import mcp.server.stdio
 import mcp.types as types
 from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
-
 from pdf_rag.rag import RAG
+
+from env import load_env_file
 
 # Define available prompts
 PROMPTS = {
@@ -23,6 +23,8 @@ PROMPTS = {
     )
 }
 
+load_env_file()
+
 # Initialize server
 app = Server("pdfsearch-server")
 
@@ -34,7 +36,7 @@ async def list_prompts() -> list[types.Prompt]:
 
 @app.get_prompt()
 async def get_prompt(
-    name: str, arguments: dict[str, str] | None = None
+        name: str, arguments: dict[str, str] | None = None
 ) -> types.GetPromptResult:
     if name not in PROMPTS:
         raise ValueError(f"Prompt not found: {name}")

@@ -1,6 +1,5 @@
 """THe RAG backbone of this MCP server"""
 
-import sys
 from pathlib import Path
 from typing import List
 
@@ -10,6 +9,8 @@ from openai import OpenAI
 from pypdf import PdfReader
 from tqdm import tqdm
 from typing_extensions import Tuple
+
+from env import load_env_file
 
 VECTOR_COLLECTION_NAME = "document_chunks"
 EMBEDDING_DIMENSIONS = 1024
@@ -34,6 +35,7 @@ QUERY_SEARCH = (
     f"  LIMIT 10;"
 )
 
+load_env_file()
 
 class RAG:
     """Basic document RAG system.
