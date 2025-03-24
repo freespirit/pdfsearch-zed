@@ -7,7 +7,7 @@ PDF document and use the results in Zed's AI Assistant.
 
 This extension currently requires:
 
-1. An `OpenAI` API key (for generating embeddings)
+1. An `OpenAI` API key (to generate embeddings)
 2. `uv` installed on your system
 
 **Note:** While the current setup requires an OpenAI API key for generating embeddings, we plan to implement a self-contained alternative in future versions. Community feedback will help prioritize these improvements.
@@ -34,7 +34,9 @@ uv sync
 
 ```bash
 cd /path/to/pdfsearch-zed/pdf_rag
-export OPENAI_API_KEY=<your_openai_api_key>
+
+echo "OPENAI_API_KEY=sk-..." > src/pdf_rag/.env
+
 # This may take a couple of minutes, depending on the documents' size
 # You can provide multiple files and directories as arguments.
 #  - files would be chunked.
@@ -49,8 +51,7 @@ uv run src/pdf_rag/rag.py build "file1.pdf" "dir1" "file2.md" ...
 "context_servers": {
     "pdfsearch-context-server": {
         "settings": {
-            "extension_path": "/path/to/pdfsearch-zed",
-            "openai_api_key": "sk-..."
+            "extension_path": "/path/to/pdfsearch-zed"
         }
     }
 }

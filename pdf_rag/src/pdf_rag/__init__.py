@@ -1,6 +1,6 @@
 import asyncio
 
-from . import server
+from . import env, server
 
 
 def main():

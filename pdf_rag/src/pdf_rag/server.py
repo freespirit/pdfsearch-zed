@@ -4,9 +4,9 @@ import mcp.server.stdio
 import mcp.types as types
 from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
-from pdf_rag.rag import RAG
 
-from env import load_env_file
+from pdf_rag.env import load_env_file
+from pdf_rag.rag import RAG
 
 # Define available prompts
 PROMPTS = {
@@ -36,7 +36,7 @@ async def list_prompts() -> list[types.Prompt]:
 
 @app.get_prompt()
 async def get_prompt(
-        name: str, arguments: dict[str, str] | None = None
+    name: str, arguments: dict[str, str] | None = None
 ) -> types.GetPromptResult:
     if name not in PROMPTS:
         raise ValueError(f"Prompt not found: {name}")
@@ -46,7 +46,7 @@ async def get_prompt(
 
         # TODO figure out when to build the vector db
         rag = RAG()
-        related_chunks = rag.search(user_input)
+        related_chunks = await rag.search(user_input)
         response = ""
         for chunk in related_chunks:
             response += "<text>\n"
